@@ -34,7 +34,8 @@ ROBOTSTXT_OBEY = True
 
 # Disable cookies (enabled by default)
 
-COOKIES_ENABLED = True    #自动传递cookies
+#自动传递cookies
+COOKIES_ENABLED = True    
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False

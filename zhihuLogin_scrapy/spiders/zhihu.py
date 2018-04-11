@@ -17,30 +17,35 @@ class ZhihuSpider(scrapy.Spider):
 
     '''处理签名'''
     def get_signature(self, grantType, clientId, source, timestamp):
-        hm = hmac.new(b'd1b964811afb40118a12068ff74a12f4', None, sha1)  #new(key,message,算法)
+        #new(key,message,算法)
+        hm = hmac.new(b'd1b964811afb40118a12068ff74a12f4', None, sha1)  
         '''添加加密的内容'''
         hm.update(str.encode(grantType))  
         hm.update(str.encode(clientId))
         hm.update(str.encode(source))
         hm.update(str.encode(timestamp))
 
-        return str(hm.hexdigest())   #返回加密后的散列值
+        #返回加密后的散列值
+        return str(hm.hexdigest())   
 
     def start_requests(self):
 
-    	yield Request(self.captcha_url,meta={'cookiejar':1},callback=self.captcha_requests)  #获取验证码信息
+        #获取验证码状态
+    	yield Request(self.captcha_url,meta={'cookiejar':1},callback=self.captcha_status_parse)  
 
-    def captcha_requests(self,response):
+    def captcha_status_parse(self,response):
 
     	grantType = 'password'
     	clientId = 'c3cef7c66a1843f8b3a9e6a1e3160e20'
     	source = 'com.zhihu.web'
-    	timestamp = str(int(round(time.time() * 1000)))  # 毫秒级时间戳 签名只按这个时间戳变化
+        # 毫秒级时间戳 签名只按这个时间戳变化
+    	timestamp = str(int(round(time.time() * 1000)))  
 
     	#print(response.text)
 
     	captcha=json.loads(response.text)
-    	print(captcha['show_captcha'])   #false没有验证码
+        #false没有验证码
+    	print(captcha['show_captcha'])   
 
     	if not captcha['show_captcha']:
             signature=self.get_signature(grantType,clientId,source,timestamp)
@@ -58,14 +63,16 @@ class ZhihuSpider(scrapy.Spider):
     		"ref_source":"other_",
     		"utm_source":""
     	    }
-            yield Request(self.base_url,meta={'cookiejar':response.meta['cookiejar'],'data':data},callback=self.base_parse)   #登录界面
+            #登录界面
+            yield Request(self.base_url,meta={'cookiejar':response.meta['cookiejar'],'data':data},callback=self.login_request)   
 
     	else:
-            yield Request(self.captcha_url,method='PUT',meta={'cookiejar':response.meta['cookiejar']},callback=self.captcha_parse)   #分析验证码
+            #分析验证码
+            yield Request(self.captcha_url,method='PUT',meta={'cookiejar':response.meta['cookiejar']},callback=self.captcha_parse)   
     		
     def captcha_parse(self,response):
 
-    	'''组合验证码图片数据，写入本地，在本地中打开'''
+    	#组合验证码图片数据，写入本地，在本地中打开
     	captcha = json.loads(response.text)
     	img_data = captcha['img_base64']
     	img = 'data:image/jpg;base64,'+img_data
@@ -74,7 +81,7 @@ class ZhihuSpider(scrapy.Spider):
             file.write(img)
 
     	captcha = input('captcha:')
-
+        #验证是否成功
     	yield FormRequest(self.captcha_url,formdata={'input_text':captcha},meta={'cookiejar':response.meta['cookiejar'],'cap':captcha},callback=self.captcha_res)   #post验证码，若成功才能登录
 
     def captcha_res(self,response):
@@ -101,12 +108,13 @@ class ZhihuSpider(scrapy.Spider):
             "ref_source":"other_",
             "utm_source":""
             }
-            yield Request(self.base_url,meta={'cookiejar':response.meta['cookiejar'],'data':data},callback=self.base_parse)
+            yield Request(self.base_url,meta={'cookiejar':response.meta['cookiejar'],'data':data},callback=self.login_request)
 
-    def base_parse(self,response):
+    def login_request(self,response):
 
     	print(response.meta['data'])
-    	yield FormRequest(self.login_url,formdata=response.meta['data'],meta={'cookiejar':response.meta['cookiejar']},callback=self.parse)   #post表单
+        #post表单
+    	yield FormRequest(self.login_url,formdata=response.meta['data'],meta={'cookiejar':response.meta['cookiejar']},callback=self.parse)   
 
     def parse(self,response):
     	'''检测是否登录成功'''
